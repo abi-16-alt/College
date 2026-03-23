@@ -1,0 +1,113 @@
+Here’s a clear summary of how we solved the **404 error with ODE on Tomcat**:
+
+---
+
+### 🔎 Problem
+- You kept getting **HTTP 404 – Not Found** when accessing `http://localhost:8080/ode`.  
+- Tomcat was running, but ODE wasn’t visible even though `ode.war` was in `webapps`.
+
+---
+
+### ✅ Root Causes
+1. **Wrong Tomcat instance running**  
+   - You had Tomcat installed both as a **Windows Service** (`Tomcat9.exe`) and manually in `C:\Tomcat 9.0`.  
+   - The service Tomcat was running, but it wasn’t using the `C:\Tomcat 9.0\webapps` folder where `ode.war` was placed.  
+   - That’s why `/ode` gave 404.
+
+2. **Permissions issue stopping the service**  
+   - Initially, `net stop Tomcat9` failed with *Access is denied* because CMD wasn’t run as Administrator.
+
+3. **Deployment confusion**  
+   - The logs showed ODE was unpacked, but because the wrong Tomcat was active, the context `/ode` wasn’t registered.
+
+---
+
+### ✅ Steps Taken
+1. **Checked which process was using port 8080**  
+   - Used `netstat -ano | find "8080"` and `tasklist /FI "PID eq 15700"` to confirm that `Tomcat9.exe` (Windows Service) was bound to port 8080.
+
+2. **Stopped the wrong Tomcat service**  
+   - Ran `sc stop Tomcat9` from an **Administrator CMD** to stop the Windows Service instance.
+
+3. **Started the correct Tomcat manually**  
+   - Navigated to `C:\Tomcat 9.0\bin` and ran:
+     ```cmd
+     startup.bat
+     ```
+   - This launched the Tomcat installation that actually contained `ode.war`.
+
+4. **Verified deployment in logs**  
+   - Saw:
+     ```
+     Deploying web application archive [C:\Tomcat 9.0\webapps\ode.war]
+     Deployment ... has finished
+     ```
+   - Confirmed ODE was deployed successfully.
+
+5. **Accessed the correct URL**  
+   - Opened:
+     ```
+     http://localhost:8080/ode/index.html
+     ```
+   - The Apache ODE Console dashboard loaded, confirming ODE was running.
+
+---
+
+### 🚀 Final Outcome
+- The error was solved by **stopping the wrong Tomcat service** and **starting the correct Tomcat manually with `startup.bat`**.  
+- Once the right instance was running, ODE deployed properly and became accessible at `/ode/index.html`.
+Here’s the full set of commands we used step‑by‑step to solve the **404 error with ODE on Tomcat**:
+
+---
+
+### 🔎 Diagnostic Commands
+```cmd
+net stop Tomcat9
+net start Tomcat9
+```
+- Initially tried to restart Tomcat service, but ODE didn’t unpack properly.
+
+```cmd
+netstat -ano | find "8080"
+```
+- Checked which process was bound to port 8080.
+
+```cmd
+tasklist /FI "PID eq 15700"
+```
+- Confirmed that PID 15700 was `Tomcat9.exe` (Windows Service).
+
+---
+
+### ✅ Fix Commands
+```cmd
+sc stop Tomcat9
+```
+- Stopped the Windows Service Tomcat (needed Administrator CMD).
+
+```cmd
+cd "C:\Tomcat 9.0\bin"
+startup.bat
+```
+- Started the correct Tomcat manually from the installation that contained `ode.war`.
+
+---
+
+### 🚀 Verification Commands
+```cmd
+shutdown.bat
+startup.bat
+```
+- Restarted Tomcat cleanly to ensure ODE deployed.
+
+```cmd
+java -version
+```
+- Verified Java runtime was Java 8 (required for ODE).
+
+---
+
+### 📌 Summary
+- The **404 error** happened because the wrong Tomcat (Windows Service) was running, not the one with your `ode.war`.  
+- By stopping the service (`sc stop Tomcat9`) and starting the correct Tomcat manually (`startup.bat` from `C:\Tomcat 9.0\bin`), ODE deployed successfully and became accessible at `http://localhost:8080/ode/index.html`.
+
